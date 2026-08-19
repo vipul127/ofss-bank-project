@@ -1,1 +1,22 @@
-/.metadata/
+.metadata/
+
+# Maven build output
+**/target/
+
+# Oracle JET generated output
+ojet-client/web/
+ojet-client/staged-themes/
+
+# Node dependencies
+ojet-client/node_modules/
+
+# IDE metadata
+.idea/
+*.iml
+
+# Local runtime output
+logs/
+*.log
+
+# Local prototype credentials
+/cred
