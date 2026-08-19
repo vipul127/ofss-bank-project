@@ -1,3 +1,5 @@
-2026/08/19-13:59:08.964 3864 Reusing MANIFEST C:\Users\Vipul Choudhary\Desktop\Myversion\.metadata\.plugins\org.eclipse.swt\EBWebView\Default\Site Characteristics Database/MANIFEST-000001
-2026/08/19-13:59:08.966 3864 Recovering log #3
-2026/08/19-13:59:08.967 3864 Reusing old log C:\Users\Vipul Choudhary\Desktop\Myversion\.metadata\.plugins\org.eclipse.swt\EBWebView\Default\Site Characteristics Database/000003.log 
+2026/08/19-23:03:56.439 2a68 Log #3: 1 ops saved to Table #4 OK
+2026/08/19-23:03:56.458 2a68 Archiving C:\Users\vipul\OneDrive\Desktop\ofssbankproj\ofss-bank-project\.metadata\.plugins\org.eclipse.swt\EBWebView\Default\Site Characteristics Database/000003.log: OK
+2026/08/19-23:03:56.459 2a68 Table #4: 1 entries OK
+2026/08/19-23:03:56.464 2a68 Archiving C:\Users\vipul\OneDrive\Desktop\ofssbankproj\ofss-bank-project\.metadata\.plugins\org.eclipse.swt\EBWebView\Default\Site Characteristics Database/MANIFEST-000001: OK
+2026/08/19-23:03:56.477 2a68 **** Repaired leveldb C:\Users\vipul\OneDrive\Desktop\ofssbankproj\ofss-bank-project\.metadata\.plugins\org.eclipse.swt\EBWebView\Default\Site Characteristics Database; recovered 1 files; 130 bytes. Some data may have been lost. ****
