@@ -12,7 +12,7 @@
  * object in the callback
  */
 require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './services/apiClient'],
-  function (Bootstrap, Context, ko, apiClient) {
+  function (Bootstrap, Context, ko, ojKnockout, apiClient) {
     Bootstrap.whenDocumentReady().then(
       function () {
         function init() {
@@ -72,6 +72,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             loginView.hidden = true;
             consoleView.hidden = false;
             branchSummary.textContent = username + ' is assigned to ' + account.role + ' - ' + account.branchName + '.';
+            document.getElementById('sidebar-role').textContent = account.role;
             loadDashboard(account);
           }
 
