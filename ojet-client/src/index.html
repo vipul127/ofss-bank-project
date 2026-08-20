@@ -90,14 +90,175 @@
               <article class="data-card chart-card"><div class="card-heading"><div><p class="eyebrow">14-day cash health</p><h2 id="trajectory-title">Daily closing reserve</h2></div><span id="trajectory-signal" class="signal-badge">Loading</span></div><div class="chart-key"><i class="key-actual"></i>Actual closing reserve <i class="key-forecast"></i>Tomorrow estimate</div><div id="cash-chart" class="cash-chart" aria-label="Fourteen day cash health milestone graph"></div><div id="chart-milestones" class="chart-milestones"></div></article>
               <article class="data-card forecast-card"><div><p class="eyebrow">Tomorrow</p><h2>Forecast position</h2><p id="forecast-read" class="muted-text">Reading cash behavior...</p></div><div class="forecast-number"><strong id="forecast-value">--</strong><p id="forecast-band" class="muted-text">Loading range...</p></div></article>
             </div>
-            <div class="section-heading mock-heading"><p class="eyebrow">Other workspaces</p><h2>Coming into the console</h2></div>
-            <div class="mock-grid"><article class="mock-card"><span class="mock-icon">CU</span><div><h3>Customers</h3><p>Customer operations</p></div><b>Unavailable</b></article><article class="mock-card"><span class="mock-icon">RP</span><div><h3>Reports</h3><p>Branch reporting suite</p></div><b>Unavailable</b></article><article class="mock-card"><span class="mock-icon">ST</span><div><h3>Settings</h3><p>Workspace preferences</p></div><b>Unavailable</b></article></div>
+            <article class="ai-insight-card">
+              <div>
+                <p class="eyebrow" style="color: #f0b093;">AI CASH READ</p>
+                <h2 id="ai-headline">Preparing explanation...</h2>
+                <p id="ai-reason" class="muted-text">The daily deposit and withdrawal pattern is being analyzed.</p>
+              </div>
+              <div class="ai-insight-right">
+                <span id="ai-source" class="ai-source">RULE_BASED_FALLBACK</span>
+                <div class="ai-action-box">
+                  <span class="action-label">RECOMMENDED ACTION</span>
+                  <p id="ai-action" class="ai-action"></p>
+                </div>
+              </div>
+            </article>
+
+            <div class="section-heading mock-heading"><p class="eyebrow">Branch Treasury Operations</p><h2>Manual Cash Refill / Inflow Override</h2><p class="muted-text">Record direct cash shipments, corporate deposits, or emergency cash top-ups to restore reserve buffer.</p></div>
+            <form id="manual-cash-form" class="inline-form">
+              <div>
+                <label for="manual-type">Type</label>
+                <select id="manual-type" required style="padding: 12px 14px; font: 16px Georgia, serif; border: 1px solid var(--line); background: #fff;">
+                  <option value="DEPOSIT">DEPOSIT (Cash Refill / Corporate Inflow)</option>
+                  <option value="WITHDRAWAL">WITHDRAWAL (Bulk Cash Outflow)</option>
+                </select>
+              </div>
+              <div>
+                <label for="manual-amount">Amount (₹)</label>
+                <input id="manual-amount" type="number" min="1" step="1000" placeholder="e.g. 100000" required>
+              </div>
+              <button type="submit" style="margin-top:24px;">Record Cash Movement</button>
+            </form>
+            <p id="manual-cash-message" class="muted-text" style="margin-top:8px;"></p>
           </section>
           <section class="dashboard-section" data-panel="transactions" hidden><div class="section-heading"><div><p class="eyebrow">Live feed</p><h2>Recent transactions</h2></div></div><div id="transactions-list" class="data-list"></div></section>
           <section class="dashboard-section" data-panel="forecast" hidden><div class="section-heading"><div><p class="eyebrow">Planning view</p><h2>Forecast intelligence</h2><p class="muted-text">A decision view of today’s reserve impact and the next cash position.</p></div></div><div id="forecast-hero" class="forecast-hero"></div><div class="forecast-chart-wrap"><div class="section-heading compact-heading"><p class="eyebrow">Cash health history</p><h2>14-day EOD reserve trajectory</h2></div><div id="forecast-chart" class="forecast-chart"></div><div id="forecast-chart-milestones" class="chart-milestones"></div></div><div id="forecast-detail" class="forecast-detail-grid"></div><div id="forecast-net-banner" class="forecast-net-banner"></div></section>
           <section class="dashboard-section" data-panel="transfers" hidden><div class="section-heading"><div><p class="eyebrow">Network view</p><h2>Nearby branch liquidity</h2><p class="muted-text">See which branches are building surplus and which are under pressure.</p></div></div><div id="nearby-branches" class="nearby-grid"></div><div class="section-heading transfer-heading"><p class="eyebrow">Workflow</p><h2>Transfer requests</h2></div><div id="transfers-list" class="data-list"></div></section>
           <section class="dashboard-section" data-panel="settings" hidden><div class="section-heading"><div><p class="eyebrow">Branch setting</p><h2>Cash threshold</h2></div></div><form id="threshold-form" class="inline-form"><label for="threshold-input">Minimum reserve percentage</label><input id="threshold-input" type="number" min="0" max="100" step="0.01" required><button type="submit">Save threshold</button></form><p id="threshold-message" class="muted-text"></p></section>
         </main>
+      </section>
+      <section id="admin-view" class="admin-panel" aria-labelledby="admin-title" hidden>
+        <header class="admin-header">
+          <div>
+            <div class="admin-badge-row"><span class="brand-mark sm">BC</span><span class="eyebrow">Bank Central Administration</span><span class="live-pill"><span class="live-dot"></span> Live Read-Only Oversight</span></div>
+            <h1 id="admin-title">Executive Liquidity Console</h1>
+            <p class="branch-summary">Consolidated real-time monitoring of cash reserves, loan portfolios, 10-day flow diagnostics, and AI intelligence across all network branches.</p>
+          </div>
+          <button id="admin-logout" class="secondary-button" type="button">Sign out</button>
+        </header>
+
+        <p id="admin-error" class="form-error" role="alert" hidden>Admin data could not be loaded. Please ensure backend services are running.</p>
+
+        <!-- Top Global Summary Cards -->
+        <div class="admin-metrics">
+          <article class="admin-kpi-card">
+            <span class="kpi-label">Total Cash Liquidity</span>
+            <strong id="admin-cash">--</strong>
+            <small class="kpi-sub">Aggregate cash reserve across branches</small>
+          </article>
+          <article class="admin-kpi-card">
+            <span class="kpi-label">Total Loan Book</span>
+            <strong id="admin-loans">--</strong>
+            <small class="kpi-sub">Active lending portfolio</small>
+          </article>
+          <article class="admin-kpi-card">
+            <span class="kpi-label">Total Assets (AUM)</span>
+            <strong id="admin-assets">--</strong>
+            <small class="kpi-sub">Total enterprise asset base</small>
+          </article>
+          <article class="admin-kpi-card highlight">
+            <span class="kpi-label">Network Health</span>
+            <strong id="admin-network-health">--</strong>
+            <small id="admin-network-sub" class="kpi-sub">Loading branch statuses...</small>
+          </article>
+        </div>
+
+        <!-- Branch Matrix -->
+        <div class="section-heading flex-between">
+          <div>
+            <p class="eyebrow">Branch Register</p>
+            <h2>Assets and liquidity by branch</h2>
+            <p class="muted-text">Select any branch below to inspect live transaction flows, 10-day deposit/withdrawal trends, and AI-driven liquidity diagnostics.</p>
+          </div>
+        </div>
+
+        <div id="admin-branches" class="admin-table"></div>
+
+        <!-- Branch Deep-Dive Inspector -->
+        <div id="admin-inspector" class="admin-inspector" hidden>
+          <div class="inspector-header">
+            <div>
+              <p class="eyebrow">Selected Branch Analysis</p>
+              <h2 id="inspector-branch-name">Branch Intelligence</h2>
+              <p id="inspector-branch-meta" class="muted-text"></p>
+            </div>
+            <div id="inspector-switcher" class="inspector-switcher"></div>
+          </div>
+
+          <!-- Inspector Metric Row -->
+          <div class="inspector-metrics-grid">
+            <article class="mini-kpi">
+              <span>Current Cash Reserve</span>
+              <strong id="inspector-reserve">--</strong>
+              <small id="inspector-reserve-status">--</small>
+            </article>
+            <article class="mini-kpi">
+              <span>Surplus / Deficit Position</span>
+              <strong id="inspector-surplus-deficit">--</strong>
+              <small id="inspector-threshold-info">--</small>
+            </article>
+            <article class="mini-kpi">
+              <span>Loan Book</span>
+              <strong id="inspector-loan-book">--</strong>
+              <small>Lending assets</small>
+            </article>
+            <article class="mini-kpi">
+              <span>Total Assets</span>
+              <strong id="inspector-total-assets">--</strong>
+              <small>Combined asset value</small>
+            </article>
+          </div>
+
+          <!-- AI Intelligence Diagnosis Card -->
+          <article class="admin-ai-card">
+            <div class="ai-card-header">
+              <div>
+                <span class="ai-pill">AI Cashflow Intelligence</span>
+                <h3 id="inspector-ai-headline">Diagnosing cash behavior...</h3>
+              </div>
+              <span id="inspector-ai-source" class="ai-source">AI_ANALYTICS_ENGINE</span>
+            </div>
+            <div class="ai-reason-box">
+              <p id="inspector-ai-reason" class="ai-reason-text">Loading 10-day pattern analysis...</p>
+            </div>
+            <div class="ai-grid-footer">
+              <div class="ai-drivers-block">
+                <span class="eyebrow-sm">Key Pattern Factors</span>
+                <ul id="inspector-ai-drivers" class="ai-drivers-list"></ul>
+              </div>
+              <div class="ai-action-block">
+                <span class="eyebrow-sm">Recommended Treasury Action</span>
+                <p id="inspector-ai-action" class="ai-action-text"></p>
+              </div>
+            </div>
+          </article>
+
+          <!-- 10-Day Cash Flow Breakdown & Transaction Feed Grid -->
+          <div class="inspector-dual-grid">
+            <article class="data-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">10-Day Cash Flow Ledger</p>
+                  <h3>Daily Inflow vs Outflow</h3>
+                </div>
+                <small class="muted-text">Deposits (+) vs Withdrawals (-)</small>
+              </div>
+              <div id="inspector-daily-table" class="daily-flow-table"></div>
+            </article>
+
+            <article class="data-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">Recent Activity</p>
+                  <h3>Live Branch Transactions</h3>
+                </div>
+                <small class="muted-text">Latest branch entries</small>
+              </div>
+              <div id="inspector-transactions-list" class="data-list compact-list"></div>
+            </article>
+          </div>
+        </div>
       </section>
       <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 

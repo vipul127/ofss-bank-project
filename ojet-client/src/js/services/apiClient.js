@@ -41,8 +41,17 @@ define([], function () {
     getRecentTransactions: function (branchId) {
       return request(serviceUrls.cash, '/api/cash-transaction/' + branchId + '/recent');
     },
-    getDailyAnalysis: function (branchId) {
-      return request(serviceUrls.cash, '/api/cash-analysis/' + branchId + '?days=14');
+    recordTransaction: function (branchId, txnType, amount) {
+      return request(serviceUrls.cash, '/api/cash-transaction', {
+        method: 'POST',
+        body: JSON.stringify({ branchId: branchId, txnType: txnType, amount: amount })
+      });
+    },
+    getDailyAnalysis: function (branchId, days) {
+      return request(serviceUrls.cash, '/api/cash-analysis/' + branchId + '?days=' + (days || 10));
+    },
+    getAiExplanation: function (branchId, days) {
+      return request(serviceUrls.cash, '/api/cash-analysis/' + branchId + '/explanation?days=' + (days || 10));
     },
     getForecast: function (branchId) {
       return request(serviceUrls.forecast, '/api/forecast/' + branchId);
@@ -73,6 +82,9 @@ define([], function () {
         method: 'PUT',
         body: JSON.stringify({ minThresholdPct: minThresholdPct })
       });
+    },
+    getAdminOverview: function () {
+      return request(serviceUrls.branch, '/api/admin/overview');
     }
   };
 });
