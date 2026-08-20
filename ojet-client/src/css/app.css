@@ -130,8 +130,25 @@ button:hover { background: var(--accent-dark); }
 .mock-card p { margin: 0; font: 11px Arial, sans-serif; }
 .mock-card b { grid-column: 1 / -1; padding-top: 9px; border-top: 1px solid #d9d8d1; font: 10px Arial, sans-serif; letter-spacing: 1px; text-transform: uppercase; }
 .data-list { border-top: 1px solid var(--line); }
+.nearby-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 34px; }
+.nearby-card { padding: 18px; background: #fbf7ef; border: 1px solid var(--line); }
+.nearby-card h3 { margin: 0 0 5px; font-size: 20px; font-weight: 400; }
+.nearby-card small { color: var(--muted); font: 11px Arial, sans-serif; }
+.nearby-card strong { display: block; margin-top: 16px; font-size: 22px; font-weight: 400; }
+.nearby-card .nearby-status { display: inline-block; margin-top: 12px; padding: 5px 7px; font: 700 10px Arial, sans-serif; letter-spacing: .7px; }
+.nearby-card .nearby-status.surplus { color: #327457; background: #dcefe3; }
+.nearby-card .nearby-status.deficit { color: #a12f2f; background: #f5dfd9; }
+.nearby-request { display: flex; gap: 7px; margin-top: 16px; }
+.nearby-request input { min-width: 0; padding: 9px 8px; font-size: 13px; }
+.nearby-request button { flex: 1; margin: 0; padding: 9px 8px; font-size: 10px; }
+.toast { position: fixed; right: 28px; bottom: 28px; z-index: 10; max-width: 360px; padding: 14px 18px; color: #fff; background: #243836; box-shadow: 0 12px 30px rgba(20, 30, 28, .2); font: 13px Arial, sans-serif; }
+.toast.success { background: #327457; }
+.toast.error { background: #a12f2f; }
+.transfer-heading { margin-top: 12px; }
 .list-row { display: flex; justify-content: space-between; gap: 20px; padding: 16px 4px; border-bottom: 1px solid var(--line); }
 .list-row small { display: block; margin-top: 5px; color: var(--muted); font: 12px Arial, sans-serif; }
+.transfer-action { margin: 8px 0 0 12px; padding: 7px 10px; font-size: 10px; }
+.transfer-action.revoke { color: #a12f2f; background: #f5dfd9; }
 .inline-form { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
 .inline-form label { width: 100%; }
 .inline-form input { width: 180px; }
@@ -151,6 +168,8 @@ button:hover { background: var(--accent-dark); }
   .forecast-number { margin-top: 20px; }
   .forecast-detail-grid { grid-template-columns: 1fr; }
   .forecast-hero { grid-template-columns: 1fr; }
+  .nearby-grid { grid-template-columns: 1fr; }
+  .toast { right: 16px; bottom: 16px; left: 16px; max-width: none; }
 }
 
 @media (min-width: 561px) and (max-width: 900px) {

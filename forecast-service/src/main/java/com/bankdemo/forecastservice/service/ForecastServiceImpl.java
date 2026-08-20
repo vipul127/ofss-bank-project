@@ -36,7 +36,11 @@ public class ForecastServiceImpl implements ForecastService {
 		BigDecimal threshold = branch.getCurrentReserve().multiply(branch.getMinThresholdPct()).divide(BigDecimal.valueOf(100));
 		List<ForecastCalculator.DailyPosition> positions = dailyPositions(cashManagementServiceClient.getRecentTransactions(branchId));
 		ForecastCalculator.ForecastResult result = calculator.forecastNextDay(positions, targetDate.getDayOfWeek(), threshold);
-		ForecastSnapshot snapshot = snapshotRepository.findByBranchIdAndForecastDate(branchId, targetDate).orElseGet(ForecastSnapshot::new);
+		// Legacy/demo data may contain duplicate snapshots for the same branch/date.
+		// Select one deterministically instead of relying on a unique-result query.
+		ForecastSnapshot snapshot = snapshotRepository
+				.findByBranchIdAndForecastDateOrderByForecastIdDesc(branchId, targetDate)
+				.stream().findFirst().orElseGet(ForecastSnapshot::new);
 		snapshot.setForecastId(snapshot.getForecastId() == null ? UUID.randomUUID().toString() : snapshot.getForecastId());
 		snapshot.setBranchId(branchId);
 		snapshot.setForecastDate(targetDate);

@@ -28,6 +28,22 @@ public class CashRequirementServiceImpl implements CashRequirementService {
 				.orElseThrow(() -> new IllegalArgumentException("No surplus source branch available"));
 		SuggestedSourceDto dto = new SuggestedSourceDto(); dto.setBranchId(source.getBranchId()); dto.setBranchName(source.getBranchName()); return dto;
 	}
+	public List<NearbyBranchDto> getNearbyBranches(String branchId) {
+		BranchDto current = branchClient.getBranch(branchId);
+		List<CashPositionDto> positions = cashClient.getAllPositions();
+		return branchClient.getAllBranches().stream().filter(b -> !b.getBranchId().equalsIgnoreCase(branchId)).map(branch -> {
+			CashPositionDto position = positions.stream().filter(p -> p.getBranchId().equals(branch.getBranchId())).findFirst().orElse(null);
+			NearbyBranchDto dto = new NearbyBranchDto(); dto.setBranchId(branch.getBranchId()); dto.setBranchName(branch.getBranchName()); dto.setDistanceKm(distance(current, branch));
+			if (position != null) { dto.setStatus(position.getStatus()); dto.setCurrentReserve(position.getCurrentReserve()); dto.setSurplusOrDeficitAmount(position.getSurplusOrDeficitAmount()); }
+			return dto;
+		}).sorted(java.util.Comparator.comparingDouble(NearbyBranchDto::getDistanceKm)).toList();
+	}
+	private double distance(BranchDto a, BranchDto b) {
+		double lat = Math.toRadians(b.getLatitude().doubleValue() - a.getLatitude().doubleValue());
+		double lon = Math.toRadians(b.getLongitude().doubleValue() - a.getLongitude().doubleValue());
+		double x = Math.sin(lat / 2) * Math.sin(lat / 2) + Math.cos(Math.toRadians(a.getLatitude().doubleValue())) * Math.cos(Math.toRadians(b.getLatitude().doubleValue())) * Math.sin(lon / 2) * Math.sin(lon / 2);
+		return 6371 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+	}
 	public TransferRequestDto createTransferRequest(TransferRequestDto request) {
 		if (request.getAmount() == null || request.getAmount().signum() <= 0 || request.getSourceBranchId() == null || request.getDestinationBranchId() == null) throw new IllegalArgumentException("source, destination, and positive amount are required");
 		if (request.getSourceBranchId().equals(request.getDestinationBranchId())) throw new IllegalArgumentException("source and destination must differ");
@@ -36,9 +52,16 @@ public class CashRequirementServiceImpl implements CashRequirementService {
 		return toDto(repository.save(entity));
 	}
 	public List<TransferRequestDto> getAllRequests() { return repository.findAll().stream().map(this::toDto).toList(); }
-	public TransferRequestDto updateStatus(String requestId, String status) {
+	public void revokeRequest(String requestId, String role) {
+		TransferRequest entity = repository.findById(requestId).orElseThrow(() -> new IllegalArgumentException("Unknown requestId: " + requestId));
+		boolean participant = entity.getSourceBranchId().equalsIgnoreCase(role) || entity.getDestinationBranchId().equalsIgnoreCase(role);
+		if (!participant || !"REQUESTED".equals(entity.getStatus())) throw new IllegalArgumentException("Only a participating branch can revoke a requested transfer");
+		repository.delete(entity);
+	}
+	public TransferRequestDto updateStatus(String requestId, String status, String role) {
 		int target = STATUSES.indexOf(status); if (target < 0) throw new IllegalArgumentException("Unknown transfer status");
 		TransferRequest entity = repository.findById(requestId).orElseThrow(() -> new IllegalArgumentException("Unknown requestId: " + requestId));
+		if (role != null && !role.isBlank() && !entity.getDestinationBranchId().equalsIgnoreCase(role)) throw new IllegalArgumentException("Only the receiving branch can authorize a transfer");
 		int current = STATUSES.indexOf(entity.getStatus()); if (target != current + 1) throw new IllegalArgumentException("Transfer status must advance one state at a time");
 		entity.setStatus(status); entity.setUpdatedAt(LocalDateTime.now()); return toDto(repository.save(entity));
 	}

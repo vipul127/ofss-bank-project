@@ -95,10 +95,11 @@
           </section>
           <section class="dashboard-section" data-panel="transactions" hidden><div class="section-heading"><div><p class="eyebrow">Live feed</p><h2>Recent transactions</h2></div></div><div id="transactions-list" class="data-list"></div></section>
           <section class="dashboard-section" data-panel="forecast" hidden><div class="section-heading"><div><p class="eyebrow">Planning view</p><h2>Forecast intelligence</h2><p class="muted-text">A decision view of today’s reserve impact and the next cash position.</p></div></div><div id="forecast-hero" class="forecast-hero"></div><div class="forecast-chart-wrap"><div class="section-heading compact-heading"><p class="eyebrow">Cash health history</p><h2>14-day EOD reserve trajectory</h2></div><div id="forecast-chart" class="forecast-chart"></div><div id="forecast-chart-milestones" class="chart-milestones"></div></div><div id="forecast-detail" class="forecast-detail-grid"></div><div id="forecast-net-banner" class="forecast-net-banner"></div></section>
-          <section class="dashboard-section" data-panel="transfers" hidden><div class="section-heading"><div><p class="eyebrow">Workflow</p><h2>Transfer requests</h2></div></div><div id="transfers-list" class="data-list"></div></section>
+          <section class="dashboard-section" data-panel="transfers" hidden><div class="section-heading"><div><p class="eyebrow">Network view</p><h2>Nearby branch liquidity</h2><p class="muted-text">See which branches are building surplus and which are under pressure.</p></div></div><div id="nearby-branches" class="nearby-grid"></div><div class="section-heading transfer-heading"><p class="eyebrow">Workflow</p><h2>Transfer requests</h2></div><div id="transfers-list" class="data-list"></div></section>
           <section class="dashboard-section" data-panel="settings" hidden><div class="section-heading"><div><p class="eyebrow">Branch setting</p><h2>Cash threshold</h2></div></div><form id="threshold-form" class="inline-form"><label for="threshold-input">Minimum reserve percentage</label><input id="threshold-input" type="number" min="0" max="100" step="0.01" required><button type="submit">Save threshold</button></form><p id="threshold-message" class="muted-text"></p></section>
         </main>
       </section>
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     
   </body>

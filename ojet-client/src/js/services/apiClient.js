@@ -50,6 +50,21 @@ define([], function () {
     getTransferRequests: function () {
       return request(serviceUrls.requirement, '/api/transfer-requests');
     },
+    getNearbyBranches: function (branchId) {
+      return request(serviceUrls.requirement, '/api/cash-requirement/nearby/' + branchId).catch(function () { return []; });
+    },
+    createTransferRequest: function (sourceBranchId, destinationBranchId, amount) {
+      return request(serviceUrls.requirement, '/api/transfer-requests', {
+        method: 'POST',
+        body: JSON.stringify({ sourceBranchId: sourceBranchId, destinationBranchId: destinationBranchId, amount: amount })
+      });
+    },
+    updateTransferStatus: function (requestId, status) {
+      return request(serviceUrls.requirement, '/api/transfer-requests/' + requestId + '/status?status=' + status, { method: 'PUT' });
+    },
+    revokeTransferRequest: function (requestId) {
+      return request(serviceUrls.requirement, '/api/transfer-requests/' + requestId, { method: 'DELETE' });
+    },
     getDeficitBranches: function () {
       return request(serviceUrls.requirement, '/api/cash-requirement/deficit-branches');
     },

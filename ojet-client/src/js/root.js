@@ -113,6 +113,30 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             document.getElementById('forecast-net-banner').innerHTML = '<span class="impact-label">Net surplus added to / removed from reserve today</span><strong>' + (Number(analysis.todayNet) >= 0 ? '+' : '') + money(analysis.todayNet) + '</strong>';
           }
 
+          function renderNearbyBranches(branches) {
+            document.getElementById('nearby-branches').innerHTML = branches.length ? branches.map(function (branch) {
+              var status = (branch.status || 'UNKNOWN').toLowerCase();
+              var amount = Number(branch.surplusOrDeficitAmount) || 0;
+              var action = status === 'surplus' ? '<div class="nearby-request"><input type="number" min="1" step="1000" placeholder="Amount" aria-label="Amount to request from ' + branch.branchName + '" data-amount-for="' + branch.branchId + '"><button type="button" data-request-from="' + branch.branchId + '">Raise request</button></div>' : '';
+              return '<article class="nearby-card"><h3>' + branch.branchName + '</h3><small>' + Number(branch.distanceKm).toFixed(1) + ' km away · ' + branch.branchId + '</small><strong>' + money(Math.abs(amount)) + '</strong><small>' + (amount >= 0 ? 'available surplus' : 'estimated cash need') + '</small><span class="nearby-status ' + status + '">' + (branch.status || 'UNKNOWN') + '</span>' + action + '</article>';
+            }).join('') : '<p class="muted-text">No nearby branch data available.</p>';
+          }
+
+          function renderTransferList(transfers, role) {
+            var own = transfers.filter(function (transfer) { return transfer.destinationBranchId === role || transfer.sourceBranchId === role; });
+            document.getElementById('transfers-list').innerHTML = own.length ? own.map(function (transfer) {
+              var receiving = transfer.destinationBranchId === role;
+              var action = transfer.status === 'REQUESTED' ? (receiving ? '<button class="transfer-action" data-approve="' + transfer.requestId + '">Approve</button>' : '') + '<button class="transfer-action revoke" data-revoke="' + transfer.requestId + '">Revoke</button>' : '';
+              return '<div class="list-row"><span>' + (receiving ? 'Request from ' + transfer.sourceBranchId : 'Request to ' + transfer.destinationBranchId) + '<small>' + transfer.requestId + ' · ' + transfer.status + '</small></span><span><strong>' + money(transfer.amount) + '</strong>' + action + '</span></div>';
+            }).join('') : '<p class="muted-text">No transfer requests for this branch.</p>';
+          }
+
+          function showToast(message, type) {
+            var toast = document.getElementById('toast');
+            toast.textContent = message; toast.className = 'toast ' + type; toast.hidden = false;
+            window.clearTimeout(window.toastTimer); window.toastTimer = window.setTimeout(function () { toast.hidden = true; }, 3600);
+          }
+
           function activeSession() {
             return JSON.parse(sessionStorage.getItem('branchCashSession'));
           }
@@ -141,14 +165,16 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
           function loadDashboard(account) {
             var branchId = account.role;
             dashboardError.hidden = true;
-            Promise.all([apiClient.getPosition(branchId), apiClient.getForecast(branchId), apiClient.getRecentTransactions(branchId), apiClient.getTransferRequests(), apiClient.getDailyAnalysis(branchId)])
+            Promise.all([apiClient.getPosition(branchId), apiClient.getForecast(branchId), apiClient.getRecentTransactions(branchId), apiClient.getTransferRequests(), apiClient.getDailyAnalysis(branchId), apiClient.getNearbyBranches(branchId)])
               .then(function (results) {
                 var position = results[0];
                 var forecast = results[1];
                 var transactions = results[2];
                 var transfers = results[3];
                 var analysis = results[4];
+                var nearby = results[5];
                 analysis = normalizeAnalysis(analysis);
+                renderNearbyBranches(nearby);
                 renderChart(analysis, forecast);
                 renderForecastDetail(analysis, forecast, position);
                 document.getElementById('forecast-chart').innerHTML = document.getElementById('cash-chart').innerHTML;
@@ -168,10 +194,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
                 document.getElementById('transactions-list').innerHTML = transactions.length ? transactions.map(function (transaction) {
                   return '<div class="list-row"><span>' + transaction.txnType + '<small>' + new Date(transaction.eventTimestamp).toLocaleString() + '</small></span><strong>' + money(transaction.amount) + '</strong></div>';
                 }).join('') : '<p class="muted-text">No transactions recorded yet.</p>';
-                var ownTransfers = transfers.filter(function (transfer) { return transfer.destinationBranchId === branchId; });
-                document.getElementById('transfers-list').innerHTML = ownTransfers.length ? ownTransfers.map(function (transfer) {
-                  return '<div class="list-row"><span>From ' + transfer.sourceBranchId + '<small>' + transfer.requestId + '</small></span><strong>' + transfer.status + '</strong></div>';
-                }).join('') : '<p class="muted-text">No transfer requests for this branch.</p>';
+                renderTransferList(transfers, branchId);
                 document.getElementById('threshold-input').value = position.thresholdAmount / position.currentReserve * 100;
               }).catch(function (error) {
                 dashboardError.textContent = 'Live data could not be loaded. Check that the backend services are running.';
@@ -240,6 +263,35 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             apiClient.updateThreshold(session.role, Number(document.getElementById('threshold-input').value))
               .then(function () { document.getElementById('threshold-message').textContent = 'Threshold saved for ' + session.role + '.'; loadDashboard(accounts[session.username]); })
               .catch(function () { document.getElementById('threshold-message').textContent = 'Threshold could not be saved.'; });
+          });
+
+          document.getElementById('nearby-branches').addEventListener('click', function (event) {
+            var button = event.target.closest('[data-request-from]');
+            if (!button) return;
+            var source = button.getAttribute('data-request-from');
+            var amountInput = document.querySelector('[data-amount-for="' + source + '"]');
+            var amount = Number(amountInput.value);
+            var session = activeSession();
+            if (!amount || amount <= 0) { showToast('Enter a positive amount to request.', 'error'); amountInput.focus(); return; }
+            button.disabled = true;
+            apiClient.createTransferRequest(session.role, source, amount).then(function () {
+              showToast('Request raised to ' + source + ' for approval.', 'success');
+              amountInput.value = '';
+              return apiClient.getTransferRequests();
+            }).then(function (transfers) {
+              var ownTransfers = transfers.filter(function (transfer) { return transfer.destinationBranchId === session.role; });
+              document.getElementById('transfers-list').innerHTML = ownTransfers.length ? ownTransfers.map(function (transfer) {
+                return '<div class="list-row"><span>From ' + transfer.sourceBranchId + '<small>' + transfer.requestId + '</small></span><strong>' + transfer.status + '</strong></div>';
+              }).join('') : '<p class="muted-text">No transfer requests for this branch.</p>';
+            }).catch(function () { showToast('Transfer request could not be raised.', 'error'); }).finally(function () { button.disabled = false; });
+          });
+
+          document.getElementById('transfers-list').addEventListener('click', function (event) {
+            var approve = event.target.closest('[data-approve]');
+            var revoke = event.target.closest('[data-revoke]');
+            var session = activeSession();
+            if (approve) apiClient.updateTransferStatus(approve.getAttribute('data-approve'), 'APPROVED').then(function () { showToast('Transfer approved.', 'success'); loadDashboard(accounts[session.username]); }).catch(function () { showToast('Transfer could not be approved.', 'error'); });
+            if (revoke) apiClient.revokeTransferRequest(revoke.getAttribute('data-revoke')).then(function () { showToast('Transfer request revoked.', 'success'); loadDashboard(accounts[session.username]); }).catch(function () { showToast('Transfer could not be revoked.', 'error'); });
           });
         }
         // If running in a hybrid (e.g. Cordova) environment, we need to wait for the deviceready

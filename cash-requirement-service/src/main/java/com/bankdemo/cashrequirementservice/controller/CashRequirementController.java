@@ -24,21 +24,31 @@ public class CashRequirementController {
 		checkRole(deficitBranchId, role);
 		return service.suggestSourceBranch(deficitBranchId);
 	}
+	@GetMapping("/cash-requirement/nearby/{branchId}")
+	public List<NearbyBranchDto> getNearby(@PathVariable String branchId, @RequestHeader(value = "X-Branch-Role", required = false) String role) {
+		checkRole(branchId, role);
+		return service.getNearbyBranches(branchId);
+	}
 	@PostMapping("/transfer-requests")
 	public TransferRequestDto createRequest(@RequestBody TransferRequestDto request,
 			@RequestHeader(value = "X-Branch-Role", required = false) String role) {
-		checkRole(request.getDestinationBranchId(), role);
+		// The logged-in branch is the requester/source. The destination branch authorizes later.
+		checkRole(request.getSourceBranchId(), role);
 		return service.createTransferRequest(request);
 	}
 	@GetMapping("/transfer-requests")
 	public List<TransferRequestDto> getAllRequests(@RequestHeader(value = "X-Branch-Role", required = false) String role) {
 		List<TransferRequestDto> requests = service.getAllRequests();
 		return role == null || role.isBlank() ? requests : requests.stream()
-				.filter(request -> role.equalsIgnoreCase(request.getDestinationBranchId())).toList();
+				.filter(request -> role.equalsIgnoreCase(request.getDestinationBranchId()) || role.equalsIgnoreCase(request.getSourceBranchId())).toList();
 	}
 	@PutMapping("/transfer-requests/{requestId}/status")
-	public TransferRequestDto updateStatus(@PathVariable String requestId, @RequestParam String status) {
-		return service.updateStatus(requestId, status);
+	public TransferRequestDto updateStatus(@PathVariable String requestId, @RequestParam String status, @RequestHeader("X-Branch-Role") String role) {
+		return service.updateStatus(requestId, status, role);
+	}
+	@DeleteMapping("/transfer-requests/{requestId}")
+	public void revokeRequest(@PathVariable String requestId, @RequestHeader("X-Branch-Role") String role) {
+		service.revokeRequest(requestId, role);
 	}
 
 	private void checkRole(String branchId, String role) {
