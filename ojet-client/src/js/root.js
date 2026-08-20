@@ -34,6 +34,35 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
           }
 
+          function renderChart(transactions, position, forecast) {
+            var chart = document.getElementById('cash-chart');
+            var deltas = transactions.slice().reverse().map(function (item) {
+              return item.txnType === 'WITHDRAWAL' ? -Number(item.amount) : Number(item.amount);
+            });
+            if (!deltas.length) { chart.innerHTML = '<p class="muted-text">No live transaction history yet.</p>'; return; }
+            var currentReserve = Number(position.currentReserve);
+            var openingReserve = currentReserve - deltas.reduce(function (sum, value) { return sum + value; }, 0);
+            var points = [], running = openingReserve;
+            deltas.forEach(function (delta) { running += delta; points.push(running); });
+            if (points.length === 1) points.unshift(openingReserve);
+            var min = Math.min.apply(null, points.concat([Number(forecast.confidenceBandLow)]));
+            var max = Math.max.apply(null, points.concat([Number(forecast.confidenceBandHigh)]));
+            var range = max - min || 1;
+            var width = 720, height = 150;
+            function x(i) { return 12 + i * (width - 24) / Math.max(points.length - 1, 1); }
+            function y(v) { return height - 12 - (v - min) * (height - 24) / range; }
+            var actual = points.map(function (v, i) { return x(i) + ',' + y(v); }).join(' ');
+            var lastX = x(points.length - 1), lastY = y(points[points.length - 1]);
+            var forecastY = y(Number(forecast.predictedPosition));
+            var bandTop = y(Number(forecast.confidenceBandHigh));
+            var bandBottom = y(Number(forecast.confidenceBandLow));
+            chart.innerHTML = '<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Actual transaction line and forecast deviation band">' +
+              '<polygon class="chart-band" points="' + lastX + ',' + bandTop + ' ' + width + ',' + bandTop + ' ' + width + ',' + bandBottom + ' ' + lastX + ',' + bandBottom + '"></polygon>' +
+              '<polyline class="chart-line actual" points="' + actual + '"></polyline>' +
+              '<line class="chart-line forecast" x1="' + lastX + '" y1="' + lastY + '" x2="' + (width - 12) + '" y2="' + forecastY + '"></line>' +
+              '<circle class="chart-point" cx="' + lastX + '" cy="' + lastY + '" r="4"></circle></svg>';
+          }
+
           function activeSession() {
             return JSON.parse(sessionStorage.getItem('branchCashSession'));
           }
@@ -47,6 +76,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
                 var forecast = results[1];
                 var transactions = results[2];
                 var transfers = results[3];
+                renderChart(transactions, position, forecast);
                 document.getElementById('reserve-value').textContent = money(position.currentReserve);
                 document.getElementById('threshold-value').textContent = money(position.thresholdAmount);
                 document.getElementById('status-value').textContent = position.status;
@@ -106,6 +136,8 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             consoleView.hidden = true;
             loginView.hidden = false;
             loginForm.reset();
+            document.querySelectorAll('[data-panel]').forEach(function (panel) { panel.hidden = panel.dataset.panel !== 'overview'; });
+            document.querySelectorAll('.tab-button').forEach(function (item) { item.classList.toggle('active', item.dataset.section === 'overview'); });
           });
 
           document.querySelectorAll('.tab-button').forEach(function (button) {
