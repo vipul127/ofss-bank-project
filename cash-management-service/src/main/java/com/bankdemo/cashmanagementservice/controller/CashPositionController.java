@@ -2,6 +2,7 @@ package com.bankdemo.cashmanagementservice.controller;
 
 import com.bankdemo.cashmanagementservice.dto.CashPositionDto;
 import com.bankdemo.cashmanagementservice.dto.CashTransactionDto;
+import com.bankdemo.cashmanagementservice.dto.DailyCashAnalysisDto;
 import com.bankdemo.cashmanagementservice.service.CashPositionService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
@@ -41,6 +42,14 @@ public class CashPositionController {
 			@RequestHeader(value = "X-Branch-Role", required = false) String role) {
 		checkRole(branchId, role);
 		return cashPositionService.getRecentTransactions(branchId, 20);
+	}
+
+	@GetMapping("/cash-analysis/{branchId}")
+	public DailyCashAnalysisDto getDailyAnalysis(@PathVariable String branchId,
+			@RequestParam(defaultValue = "14") int days,
+			@RequestHeader(value = "X-Branch-Role", required = false) String role) {
+		checkRole(branchId, role);
+		return cashPositionService.getDailyAnalysis(branchId, Math.min(Math.max(days, 2), 31));
 	}
 
 	private void checkRole(String branchId, String role) {

@@ -70,7 +70,7 @@
             <button class="tab-button" data-section="transfers" type="button"><span>04</span>Transfers</button>
             <button class="tab-button" data-section="settings" type="button"><span>05</span>Threshold</button>
           </nav>
-          <div class="sidebar-footer"><span class="status-dot"></span><span id="sidebar-role">BR004</span><button id="logout-button" class="sidebar-logout" type="button">Sign out</button></div>
+          <div class="sidebar-footer"><span class="status-dot"></span><span id="sidebar-role">BR004</span><div class="service-health" aria-label="Service health"><span class="health-label">Services</span><span class="health-item" title="Eureka"><i id="health-eureka"></i>E</span><span class="health-item" title="Branch"><i id="health-branch"></i>B</span><span class="health-item" title="Cash"><i id="health-cash"></i>C</span><span class="health-item" title="Forecast"><i id="health-forecast"></i>F</span><span class="health-item" title="Requirement"><i id="health-requirement"></i>R</span><span class="health-item" title="Simulator"><i id="health-simulator"></i>S</span></div><button id="logout-button" class="sidebar-logout" type="button">Sign out</button></div>
         </aside>
         <main class="console-main">
           <header class="console-header">
@@ -80,18 +80,21 @@
           <section class="dashboard-section" data-panel="overview">
             <div class="metric-grid">
               <article class="metric-card"><span>Reserve</span><strong id="reserve-value">--</strong><small>Current cash position</small></article>
-              <article class="metric-card"><span>Threshold</span><strong id="threshold-value">--</strong><small>Minimum operating reserve</small></article>
-              <article class="metric-card"><span>Position</span><strong id="status-value">--</strong><small>Live branch signal</small></article>
+              <article class="metric-card"><span>Net position</span><strong id="status-value">--</strong><small id="net-position-value">Live branch signal</small></article>
+              <article class="metric-card"><span>14-day volatility</span><strong id="stddev-value">--</strong><small>Standard deviation of daily net</small></article>
+              <article class="metric-card"><span>Avg surplus</span><strong id="surplus-value">--</strong><small>Average positive daily movement</small></article>
+              <article class="metric-card"><span>Avg funding need</span><strong id="deficit-value">--</strong><small>Average negative daily movement</small></article>
+              <article class="metric-card"><span>Withdrawal impact</span><strong id="impact-value">--</strong><small>Largest withdrawal as % of reserve</small></article>
             </div>
             <div class="overview-grid">
-              <article class="data-card chart-card"><div class="card-heading"><div><p class="eyebrow">Cash movement</p><h2>Recent activity</h2></div><span class="chart-key"><i class="key-actual"></i>Actual <i class="key-forecast"></i>Forecast</span></div><div id="cash-chart" class="cash-chart" aria-label="Recent cash movement graph"></div><div class="chart-axis"><span>Oldest</span><span>Today</span></div></article>
-              <article class="data-card forecast-card"><div><p class="eyebrow">Tomorrow</p><h2>Forecast position</h2></div><strong id="forecast-value">--</strong><p id="forecast-band" class="muted-text">Loading forecast...</p></article>
+              <article class="data-card chart-card"><div class="card-heading"><div><p class="eyebrow">14-day cash health</p><h2 id="trajectory-title">Daily closing reserve</h2></div><span id="trajectory-signal" class="signal-badge">Loading</span></div><div class="chart-key"><i class="key-actual"></i>Actual closing reserve <i class="key-forecast"></i>Tomorrow estimate</div><div id="cash-chart" class="cash-chart" aria-label="Fourteen day cash health milestone graph"></div><div id="chart-milestones" class="chart-milestones"></div></article>
+              <article class="data-card forecast-card"><div><p class="eyebrow">Tomorrow</p><h2>Forecast position</h2><p id="forecast-read" class="muted-text">Reading cash behavior...</p></div><div class="forecast-number"><strong id="forecast-value">--</strong><p id="forecast-band" class="muted-text">Loading range...</p></div></article>
             </div>
             <div class="section-heading mock-heading"><p class="eyebrow">Other workspaces</p><h2>Coming into the console</h2></div>
             <div class="mock-grid"><article class="mock-card"><span class="mock-icon">CU</span><div><h3>Customers</h3><p>Customer operations</p></div><b>Unavailable</b></article><article class="mock-card"><span class="mock-icon">RP</span><div><h3>Reports</h3><p>Branch reporting suite</p></div><b>Unavailable</b></article><article class="mock-card"><span class="mock-icon">ST</span><div><h3>Settings</h3><p>Workspace preferences</p></div><b>Unavailable</b></article></div>
           </section>
           <section class="dashboard-section" data-panel="transactions" hidden><div class="section-heading"><div><p class="eyebrow">Live feed</p><h2>Recent transactions</h2></div></div><div id="transactions-list" class="data-list"></div></section>
-          <section class="dashboard-section" data-panel="forecast" hidden><div class="section-heading"><div><p class="eyebrow">Planning view</p><h2>Branch forecast</h2></div></div><div id="forecast-detail" class="data-card"></div></section>
+          <section class="dashboard-section" data-panel="forecast" hidden><div class="section-heading"><div><p class="eyebrow">Planning view</p><h2>Forecast intelligence</h2><p class="muted-text">A decision view of today’s reserve impact and the next cash position.</p></div></div><div id="forecast-hero" class="forecast-hero"></div><div class="forecast-chart-wrap"><div class="section-heading compact-heading"><p class="eyebrow">Cash health history</p><h2>14-day EOD reserve trajectory</h2></div><div id="forecast-chart" class="forecast-chart"></div><div id="forecast-chart-milestones" class="chart-milestones"></div></div><div id="forecast-detail" class="forecast-detail-grid"></div><div id="forecast-net-banner" class="forecast-net-banner"></div></section>
           <section class="dashboard-section" data-panel="transfers" hidden><div class="section-heading"><div><p class="eyebrow">Workflow</p><h2>Transfer requests</h2></div></div><div id="transfers-list" class="data-list"></div></section>
           <section class="dashboard-section" data-panel="settings" hidden><div class="section-heading"><div><p class="eyebrow">Branch setting</p><h2>Cash threshold</h2></div></div><form id="threshold-form" class="inline-form"><label for="threshold-input">Minimum reserve percentage</label><input id="threshold-input" type="number" min="0" max="100" step="0.01" required><button type="submit">Save threshold</button></form><p id="threshold-message" class="muted-text"></p></section>
         </main>

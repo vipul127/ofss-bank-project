@@ -41,6 +41,9 @@ define([], function () {
     getRecentTransactions: function (branchId) {
       return request(serviceUrls.cash, '/api/cash-transaction/' + branchId + '/recent');
     },
+    getDailyAnalysis: function (branchId) {
+      return request(serviceUrls.cash, '/api/cash-analysis/' + branchId + '?days=14');
+    },
     getForecast: function (branchId) {
       return request(serviceUrls.forecast, '/api/forecast/' + branchId);
     },

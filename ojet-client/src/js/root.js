@@ -31,28 +31,45 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
           var dashboardError = document.getElementById('dashboard-error');
 
           function money(value) {
-            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
+            var numeric = Number(value);
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number.isFinite(numeric) ? numeric : 0);
           }
 
-          function renderChart(transactions, position, forecast) {
-            var chart = document.getElementById('cash-chart');
-            var deltas = transactions.slice().reverse().map(function (item) {
-              return item.txnType === 'WITHDRAWAL' ? -Number(item.amount) : Number(item.amount);
+          function normalizeAnalysis(analysis) {
+            analysis = analysis || {};
+            var points = analysis.dailyPoints || [];
+            var last = points.length ? points[points.length - 1] : {};
+            var nets = points.map(function (point) { return Number(point.netMovement); }).filter(Number.isFinite);
+            var average = Number(analysis.averageDailyNet);
+            if (!Number.isFinite(average)) average = nets.length ? nets.reduce(function (sum, value) { return sum + value; }, 0) / nets.length : 0;
+            var todayNet = Number(analysis.todayNet);
+            if (!Number.isFinite(todayNet)) todayNet = Number(last.netMovement) || 0;
+            analysis.averageDailyNet = average;
+            analysis.todayNet = todayNet;
+            analysis.todayDeposits = Number.isFinite(Number(analysis.todayDeposits)) ? Number(analysis.todayDeposits) : Math.max(todayNet, 0);
+            analysis.todayWithdrawals = Number.isFinite(Number(analysis.todayWithdrawals)) ? Number(analysis.todayWithdrawals) : Math.max(-todayNet, 0);
+            analysis.reserveBeforeToday = Number.isFinite(Number(analysis.reserveBeforeToday)) ? Number(analysis.reserveBeforeToday) : Number(last.closingReserve || 0) - todayNet;
+            analysis.todayVsAverageAmount = Number.isFinite(Number(analysis.todayVsAverageAmount)) ? Number(analysis.todayVsAverageAmount) : todayNet - average;
+            analysis.todayVsAveragePercent = Number.isFinite(Number(analysis.todayVsAveragePercent)) ? Number(analysis.todayVsAveragePercent) : (average ? Math.abs(todayNet - average) * 100 / Math.abs(average) : 0);
+            ['standardDeviation', 'averageSurplus', 'averageDeficit', 'withdrawalImpactPercent'].forEach(function (key) {
+              if (!Number.isFinite(Number(analysis[key]))) analysis[key] = 0;
             });
-            if (!deltas.length) { chart.innerHTML = '<p class="muted-text">No live transaction history yet.</p>'; return; }
-            var currentReserve = Number(position.currentReserve);
-            var openingReserve = currentReserve - deltas.reduce(function (sum, value) { return sum + value; }, 0);
-            var points = [], running = openingReserve;
-            deltas.forEach(function (delta) { running += delta; points.push(running); });
-            if (points.length === 1) points.unshift(openingReserve);
-            var min = Math.min.apply(null, points.concat([Number(forecast.confidenceBandLow)]));
-            var max = Math.max.apply(null, points.concat([Number(forecast.confidenceBandHigh)]));
+            return analysis;
+          }
+
+          function renderChart(analysis, forecast) {
+            var chart = document.getElementById('cash-chart');
+            var points = analysis.dailyPoints || [];
+            if (!points.length) { chart.innerHTML = '<p class="muted-text">No daily history yet.</p>'; return; }
+            var reserves = points.map(function (point) { return Number(point.closingReserve); });
+            var min = Math.min.apply(null, reserves.concat([Number(forecast.confidenceBandLow)]));
+            var max = Math.max.apply(null, reserves.concat([Number(forecast.confidenceBandHigh)]));
             var range = max - min || 1;
             var width = 720, height = 150;
             function x(i) { return 12 + i * (width - 24) / Math.max(points.length - 1, 1); }
             function y(v) { return height - 12 - (v - min) * (height - 24) / range; }
-            var actual = points.map(function (v, i) { return x(i) + ',' + y(v); }).join(' ');
-            var lastX = x(points.length - 1), lastY = y(points[points.length - 1]);
+            var actual = reserves.map(function (v, i) { return x(i) + ',' + y(v); }).join(' ');
+            var lastX = x(reserves.length - 1), lastY = y(reserves[reserves.length - 1]);
             var forecastY = y(Number(forecast.predictedPosition));
             var bandTop = y(Number(forecast.confidenceBandHigh));
             var bandBottom = y(Number(forecast.confidenceBandLow));
@@ -61,25 +78,90 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
               '<polyline class="chart-line actual" points="' + actual + '"></polyline>' +
               '<line class="chart-line forecast" x1="' + lastX + '" y1="' + lastY + '" x2="' + (width - 12) + '" y2="' + forecastY + '"></line>' +
               '<circle class="chart-point" cx="' + lastX + '" cy="' + lastY + '" r="4"></circle></svg>';
+            document.getElementById('chart-milestones').innerHTML = points.map(function (point) {
+              return '<span title="' + point.date + ': ' + money(point.closingReserve) + '">' + point.date.slice(5) + '</span>';
+            }).join('');
+            var direction = reserves[reserves.length - 1] >= reserves[0] ? 'rising' : 'declining';
+            var directionText = direction === 'rising' ? 'Rising' : 'Declining';
+            var signal = document.getElementById('trajectory-signal');
+            signal.textContent = directionText;
+            signal.className = 'signal-badge ' + direction;
+            document.getElementById('trajectory-title').textContent = directionText + ' over 14 days';
+            document.getElementById('forecast-read').textContent = direction === 'rising' ? 'Cash position is building.' : 'Cash position is drawing down.';
+          }
+
+          function renderForecastDetail(analysis, forecast, position) {
+            var direction = Number(analysis.averageDailyNet) >= 0 ? 'positive' : 'negative';
+            var detail = document.getElementById('forecast-detail');
+            var todayDirection = Number(analysis.todayNet) >= 0 ? 'positive' : 'negative';
+            detail.innerHTML = '<article class="forecast-detail-card"><span class="detail-label">Reserve before today</span><strong>' + money(analysis.reserveBeforeToday) + '</strong><small>Opening buffer before today’s activity</small></article>' +
+              '<article class="forecast-detail-card positive"><span class="detail-label">Today deposits</span><strong>+' + money(analysis.todayDeposits) + '</strong><small>Cash added today</small></article>' +
+              '<article class="forecast-detail-card negative"><span class="detail-label">Today withdrawals</span><strong>-' + money(analysis.todayWithdrawals) + '</strong><small>Cash removed today</small></article>' +
+              '<article class="forecast-detail-card ' + todayDirection + '"><span class="detail-label">Today net</span><strong>' + money(analysis.todayNet) + '</strong><small>' + (Number(analysis.todayNet) >= 0 ? 'Improved' : 'Reduced') + ' the reserve</small></article>' +
+              '<article class="forecast-detail-card ' + (Number(analysis.todayVsAverageAmount) >= 0 ? 'positive' : 'negative') + '"><span class="detail-label">Today vs 14-day average</span><strong>' + money(analysis.todayVsAverageAmount) + '</strong><small>' + Number(analysis.todayVsAveragePercent).toFixed(1) + '% ' + (Number(analysis.todayVsAverageAmount) >= 0 ? 'above' : 'below') + ' average net movement</small></article>' +
+              '<article class="forecast-detail-card ' + direction + '"><span class="detail-label">Average daily net</span><strong>' + money(analysis.averageDailyNet) + '</strong><small>Fourteen-day bundled movement</small></article>' +
+              '<article class="forecast-detail-card"><span class="detail-label">Volatility</span><strong>' + money(analysis.standardDeviation) + '</strong><small>Standard deviation of daily movement</small></article>' +
+              '<article class="forecast-detail-card ' + (Number(analysis.averageSurplus) > 0 ? 'positive' : '') + '"><span class="detail-label">Average surplus</span><strong>' + money(analysis.averageSurplus) + '</strong><small>Typical positive cash build per active day</small></article>' +
+              '<article class="forecast-detail-card ' + (Number(analysis.averageDeficit) > 0 ? 'negative' : '') + '"><span class="detail-label">Average funding need</span><strong>' + money(analysis.averageDeficit) + '</strong><small>Typical negative cash requirement per active day</small></article>' +
+              '<article class="forecast-detail-card"><span class="detail-label">Withdrawal shock</span><strong>' + Number(analysis.withdrawalImpactPercent).toFixed(1) + '%</strong><small>Largest recorded withdrawal against current reserve</small></article>' +
+              '<article class="forecast-detail-card"><span class="detail-label">Tomorrow confidence</span><strong>' + money(forecast.confidenceBandLow) + ' – ' + money(forecast.confidenceBandHigh) + '</strong><small>Expected position: ' + money(forecast.predictedPosition) + '</small></article>';
+            var impactClass = Number(analysis.todayNet) >= 0 ? 'positive' : 'negative';
+            document.getElementById('forecast-hero').innerHTML = '<article class="forecast-impact ' + impactClass + '"><span class="impact-label">Today reserve impact</span><strong>' + (Number(analysis.todayVsAveragePercent) >= 0 ? '+' : '-') + Number(analysis.todayVsAveragePercent).toFixed(1) + '%</strong><small>Today’s net movement versus the 14-day average</small></article>' +
+              '<article class="forecast-hero-card"><span class="hero-label">Today net movement</span><strong>' + money(analysis.todayNet) + '</strong><small>Deposits ' + money(analysis.todayDeposits) + ' · Withdrawals ' + money(analysis.todayWithdrawals) + '</small></article>' +
+              '<article class="forecast-hero-card"><span class="hero-label">Tomorrow estimate</span><strong>' + money(forecast.predictedPosition) + '</strong><small>Range ' + money(forecast.confidenceBandLow) + ' to ' + money(forecast.confidenceBandHigh) + '</small></article>';
+            document.getElementById('forecast-net-banner').className = 'forecast-net-banner ' + (Number(analysis.todayNet) < 0 ? 'negative' : '');
+            document.getElementById('forecast-net-banner').innerHTML = '<span class="impact-label">Net surplus added to / removed from reserve today</span><strong>' + (Number(analysis.todayNet) >= 0 ? '+' : '') + money(analysis.todayNet) + '</strong>';
           }
 
           function activeSession() {
             return JSON.parse(sessionStorage.getItem('branchCashSession'));
           }
 
+          function checkHealth(id, url, headers) {
+            fetch(url, { method: 'GET', headers: headers || {}, cache: 'no-store' }).then(function (response) {
+              document.getElementById(id).className = response.ok ? 'online' : 'offline';
+            }).catch(function () { document.getElementById(id).className = 'offline'; });
+          }
+
+          function refreshHealth() {
+            var branchId = (activeSession() || {}).role || 'BR004';
+            var headers = { 'X-Branch-Role': branchId };
+            checkHealth('health-eureka', 'http://localhost:8761/eureka/apps');
+            checkHealth('health-branch', 'http://localhost:8081/api/branches/' + branchId, headers);
+            checkHealth('health-cash', 'http://localhost:8082/api/cash-position/' + branchId, headers);
+            checkHealth('health-forecast', 'http://localhost:8083/api/forecast/' + branchId, headers);
+            checkHealth('health-requirement', 'http://localhost:8084/api/transfer-requests', headers);
+            fetch('http://localhost:8761/eureka/apps', { cache: 'no-store' }).then(function (response) {
+              return response.text();
+            }).then(function (text) {
+              document.getElementById('health-simulator').className = text.indexOf('SIMULATOR-SERVICE') >= 0 || text.indexOf('simulator-service') >= 0 ? 'online' : 'offline';
+            }).catch(function () { document.getElementById('health-simulator').className = 'offline'; });
+          }
+
           function loadDashboard(account) {
             var branchId = account.role;
             dashboardError.hidden = true;
-            Promise.all([apiClient.getPosition(branchId), apiClient.getForecast(branchId), apiClient.getRecentTransactions(branchId), apiClient.getTransferRequests()])
+            Promise.all([apiClient.getPosition(branchId), apiClient.getForecast(branchId), apiClient.getRecentTransactions(branchId), apiClient.getTransferRequests(), apiClient.getDailyAnalysis(branchId)])
               .then(function (results) {
                 var position = results[0];
                 var forecast = results[1];
                 var transactions = results[2];
                 var transfers = results[3];
-                renderChart(transactions, position, forecast);
+                var analysis = results[4];
+                analysis = normalizeAnalysis(analysis);
+                renderChart(analysis, forecast);
+                renderForecastDetail(analysis, forecast, position);
+                document.getElementById('forecast-chart').innerHTML = document.getElementById('cash-chart').innerHTML;
+                document.getElementById('forecast-chart-milestones').innerHTML = document.getElementById('chart-milestones').innerHTML;
                 document.getElementById('reserve-value').textContent = money(position.currentReserve);
-                document.getElementById('threshold-value').textContent = money(position.thresholdAmount);
                 document.getElementById('status-value').textContent = position.status;
+                var positionPercent = Number(position.currentReserve) === 0 ? 0 : Number(position.surplusOrDeficitAmount) / Number(position.currentReserve) * 100;
+                document.getElementById('net-position-value').textContent = money(position.surplusOrDeficitAmount) + ' · ' + Math.abs(positionPercent).toFixed(1) + '% ' + position.status.toLowerCase();
+                document.getElementById('status-value').className = position.status === 'SURPLUS' ? 'positive-value' : 'negative-value';
+                document.getElementById('stddev-value').textContent = money(analysis.standardDeviation);
+                document.getElementById('surplus-value').textContent = money(analysis.averageSurplus);
+                document.getElementById('deficit-value').textContent = money(analysis.averageDeficit);
+                document.getElementById('impact-value').textContent = Number(analysis.withdrawalImpactPercent).toFixed(1) + '%';
                 document.getElementById('forecast-value').textContent = money(forecast.predictedPosition);
                 document.getElementById('forecast-band').textContent = 'Range ' + money(forecast.confidenceBandLow) + ' to ' + money(forecast.confidenceBandHigh);
                 document.getElementById('forecast-detail').innerHTML = '<strong>' + money(forecast.predictedPosition) + '</strong><p class="muted-text">Confidence band: ' + money(forecast.confidenceBandLow) + ' - ' + money(forecast.confidenceBandHigh) + '</p>';
@@ -104,6 +186,9 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             branchSummary.textContent = username + ' is assigned to ' + account.role + ' - ' + account.branchName + '.';
             document.getElementById('sidebar-role').textContent = account.role;
             loadDashboard(account);
+            refreshHealth();
+            window.clearInterval(window.branchHealthTimer);
+            window.branchHealthTimer = window.setInterval(refreshHealth, 15000);
           }
 
           var storedSession = sessionStorage.getItem('branchCashSession');
@@ -136,6 +221,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             consoleView.hidden = true;
             loginView.hidden = false;
             loginForm.reset();
+            window.clearInterval(window.branchHealthTimer);
             document.querySelectorAll('[data-panel]').forEach(function (panel) { panel.hidden = panel.dataset.panel !== 'overview'; });
             document.querySelectorAll('.tab-button').forEach(function (item) { item.classList.toggle('active', item.dataset.section === 'overview'); });
           });
