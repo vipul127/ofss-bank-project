@@ -33,7 +33,7 @@ public class CashRequirementServiceImpl implements CashRequirementService {
 		List<CashPositionDto> positions = cashClient.getAllPositions();
 		return branchClient.getAllBranches().stream().filter(b -> !b.getBranchId().equalsIgnoreCase(branchId)).map(branch -> {
 			CashPositionDto position = positions.stream().filter(p -> p.getBranchId().equals(branch.getBranchId())).findFirst().orElse(null);
-			NearbyBranchDto dto = new NearbyBranchDto(); dto.setBranchId(branch.getBranchId()); dto.setBranchName(branch.getBranchName()); dto.setDistanceKm(distance(current, branch));
+			NearbyBranchDto dto = new NearbyBranchDto(); dto.setBranchId(branch.getBranchId()); dto.setBranchName(branch.getBranchName()); dto.setDistanceKm(locator.haversineKm(current, branch));
 			if (position != null) { dto.setStatus(position.getStatus()); dto.setCurrentReserve(position.getCurrentReserve()); dto.setSurplusOrDeficitAmount(position.getSurplusOrDeficitAmount()); }
 			return dto;
 		}).sorted(java.util.Comparator.comparingDouble(NearbyBranchDto::getDistanceKm)).toList();

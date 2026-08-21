@@ -17,7 +17,7 @@ public class NearestBranchLocator {
 				.filter(java.util.Objects::nonNull)
 				.min(Comparator.comparingDouble(candidate -> haversineKm(deficitBranch, candidate)));
 	}
-	private double haversineKm(BranchDto first, BranchDto second) {
+	public double haversineKm(BranchDto first, BranchDto second) {
 		double dLat = Math.toRadians(second.getLatitude().doubleValue() - first.getLatitude().doubleValue());
 		double dLon = Math.toRadians(second.getLongitude().doubleValue() - first.getLongitude().doubleValue());
 		double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(Math.toRadians(first.getLatitude().doubleValue()))

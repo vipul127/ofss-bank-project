@@ -11,5 +11,6 @@ public interface CashPositionService {
 	List<CashPositionDto> getAllPositions();
 	CashTransactionDto recordTransaction(String branchId, String txnType, BigDecimal amount);
 	List<CashTransactionDto> getRecentTransactions(String branchId, int limit);
+	List<CashTransactionDto> getTransactionsSince(String branchId, int days);
 	DailyCashAnalysisDto getDailyAnalysis(String branchId, int days);
 }

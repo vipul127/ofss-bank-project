@@ -237,7 +237,9 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
           function loadDashboard(account) {
             var branchId = account.role;
             dashboardError.hidden = true;
-            Promise.all([apiClient.getPosition(branchId), apiClient.getForecast(branchId), apiClient.getRecentTransactions(branchId), apiClient.getTransferRequests(), apiClient.getDailyAnalysis(branchId), apiClient.getNearbyBranches(branchId), apiClient.getAiExplanation(branchId)])
+            Promise.all([apiClient.getPosition(branchId), apiClient.getForecast(branchId), apiClient.getRecentTransactions(branchId), apiClient.getTransferRequests(), apiClient.getDailyAnalysis(branchId), apiClient.getNearbyBranches(branchId), apiClient.getAiExplanation(branchId).catch(function () { return null;
+              
+            })])
               .then(function (results) {
                 var position = results[0];
                 var forecast = results[1];

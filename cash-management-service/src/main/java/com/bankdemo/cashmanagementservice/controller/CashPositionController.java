@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api")
 public class CashPositionController {
@@ -43,6 +44,13 @@ public class CashPositionController {
 		checkRole(branchId, role);
 		return cashPositionService.getRecentTransactions(branchId, 20);
 	}
+
+	@GetMapping("/cash-transaction/{branchId}/since")
+	public List<CashTransactionDto> getTransactionSince(@PathVariable String branchId, @RequestParam(defaultValue = "14") int days ,@RequestHeader(value="X-Branch-Role", required=false) String role ){
+		checkRole(branchId, role);
+		return cashPositionService.getTransactionsSince(branchId, days);
+	}
+	
 
 	@GetMapping("/cash-analysis/{branchId}")
 	public DailyCashAnalysisDto getDailyAnalysis(@PathVariable String branchId,

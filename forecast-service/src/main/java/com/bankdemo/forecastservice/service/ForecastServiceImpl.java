@@ -20,6 +20,8 @@ public class ForecastServiceImpl implements ForecastService {
 	private final ForecastSnapshotRepository snapshotRepository;
 	private final BranchServiceClient branchServiceClient;
 	private final CashManagementServiceClient cashManagementServiceClient;
+	private static final int ROLLING_WINDOW_DAYS=14; 
+
 
 	public ForecastServiceImpl(ForecastCalculator calculator, ForecastSnapshotRepository snapshotRepository,
 			BranchServiceClient branchServiceClient, CashManagementServiceClient cashManagementServiceClient) {
@@ -34,7 +36,7 @@ public class ForecastServiceImpl implements ForecastService {
 		LocalDate targetDate = LocalDate.now().plusDays(1);
 		BranchDto branch = branchServiceClient.getBranch(branchId);
 		BigDecimal threshold = branch.getCurrentReserve().multiply(branch.getMinThresholdPct()).divide(BigDecimal.valueOf(100));
-		List<ForecastCalculator.DailyPosition> positions = dailyPositions(cashManagementServiceClient.getRecentTransactions(branchId));
+		List<ForecastCalculator.DailyPosition> positions = dailyPositions(cashManagementServiceClient.getTransactionsSince(branchId,ROLLING_WINDOW_DAYS));
 		ForecastCalculator.ForecastResult result = calculator.forecastNextDay(positions, targetDate.getDayOfWeek(), threshold);
 		// Legacy/demo data may contain duplicate snapshots for the same branch/date.
 		// Select one deterministically instead of relying on a unique-result query.
