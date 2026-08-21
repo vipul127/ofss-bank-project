@@ -151,6 +151,7 @@ button:hover { background: var(--accent-dark); }
 .forecast-detail-card small { display: block; margin-top: 8px; color: var(--muted); font: 12px Arial, sans-serif; line-height: 1.4; }
 .forecast-detail-card.positive strong { color: #327457; }
 .forecast-detail-card.negative strong { color: #a12f2f; }
+.forecast-detail-card.neutral strong { color: var(--muted); }
 .muted-text { color: var(--muted); line-height: 1.5; }
 .section-heading { margin-bottom: 18px; }
 .mock-heading { margin: 36px 0 14px; }

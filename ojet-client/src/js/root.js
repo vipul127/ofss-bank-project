@@ -165,13 +165,13 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
           function renderForecastDetail(analysis, forecast, position) {
             var direction = Number(analysis.averageDailyNet) >= 0 ? 'positive' : 'negative';
             var detail = document.getElementById('forecast-detail');
-            var todayDirection = Number(analysis.todayNet) >= 0 ? 'positive' : 'negative';
+            var todayDirection = Number(analysis.todayNet) > 0 ? 'positive' : (Number(analysis.todayNet) < 0 ? 'negative' : 'neutral');
             detail.innerHTML = '<article class="forecast-detail-card"><span class="detail-label">Reserve before today</span><strong>' + money(analysis.reserveBeforeToday) + '</strong><small>Opening buffer before today’s activity</small></article>' +
               '<article class="forecast-detail-card positive"><span class="detail-label">Today deposits</span><strong>+' + money(analysis.todayDeposits) + '</strong><small>Cash added today</small></article>' +
               '<article class="forecast-detail-card negative"><span class="detail-label">Today withdrawals</span><strong>-' + money(analysis.todayWithdrawals) + '</strong><small>Cash removed today</small></article>' +
-              '<article class="forecast-detail-card ' + todayDirection + '"><span class="detail-label">Today net</span><strong>' + money(analysis.todayNet) + '</strong><small>' + (Number(analysis.todayNet) >= 0 ? 'Improved' : 'Reduced') + ' the reserve</small></article>' +
+              '<article class="forecast-detail-card ' + todayDirection + '"><span class="detail-label">Today net</span><strong>' + money(analysis.todayNet) + '</strong><small>' + (Number(analysis.todayNet) > 0 ? 'Improved' : (Number(analysis.todayNet) < 0 ? 'Reduced' : 'No cash movement recorded')) + '</small></article>' +
               '<article class="forecast-detail-card ' + (Number(analysis.todayVsAverageAmount) >= 0 ? 'positive' : 'negative') + '"><span class="detail-label">Today vs 14-day average</span><strong>' + money(analysis.todayVsAverageAmount) + '</strong><small>' + Number(analysis.todayVsAveragePercent).toFixed(1) + '% ' + (Number(analysis.todayVsAverageAmount) >= 0 ? 'above' : 'below') + ' average net movement</small></article>' +
-              '<article class="forecast-detail-card ' + direction + '"><span class="detail-label">Average daily net</span><strong>' + money(analysis.averageDailyNet) + '</strong><small>Fourteen-day bundled movement</small></article>' +
+              '<article class="forecast-detail-card ' + direction + '"><span class="detail-label">Average daily net</span><strong>' + money(analysis.averageDailyNet) + '</strong><small>Average across 14 calendar days</small></article>' +
               '<article class="forecast-detail-card"><span class="detail-label">Volatility (Severity)</span><strong>' + money(analysis.standardDeviation) + '</strong><small>Standard deviation of daily net movement</small></article>' +
               '<article class="forecast-detail-card ' + (Number(analysis.averageSurplus) > 0 ? 'positive' : '') + '"><span class="detail-label">Average surplus</span><strong>' + money(analysis.averageSurplus) + '</strong><small>Typical positive cash build per active day</small></article>' +
               '<article class="forecast-detail-card ' + (Number(analysis.averageDeficit) > 0 ? 'negative' : '') + '"><span class="detail-label">Average funding need</span><strong>' + money(analysis.averageDeficit) + '</strong><small>Typical negative cash requirement per active day</small></article>' +
@@ -259,6 +259,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
                 var positionPercent = (Number(position.surplusOrDeficitAmount) / baseline) * 100;
                 var formattedAmount = (Number(position.surplusOrDeficitAmount) >= 0 ? '+' : '') + money(position.surplusOrDeficitAmount);
                 document.getElementById('net-position-value').textContent = formattedAmount + ' · ' + Math.abs(positionPercent).toFixed(1) + '% ' + position.status.toLowerCase();
+                document.getElementById('status-value').textContent = position.status;
                 document.getElementById('status-value').className = position.status === 'SURPLUS' ? 'positive-value' : 'negative-value';
                 document.getElementById('stddev-value').textContent = money(analysis.standardDeviation);
                 document.getElementById('surplus-value').textContent = money(analysis.averageSurplus);
@@ -271,13 +272,14 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
                 }).join('') : '<p class="muted-text">No transactions recorded yet.</p>';
                 renderTransferList(transfers, branchId);
                 document.getElementById('threshold-input').value = position.thresholdAmount / position.currentReserve * 100;
-                document.getElementById('ai-headline').textContent = ai.headline;
-                document.getElementById('ai-reason').textContent = ai.reason;
-                document.getElementById('ai-action').textContent = ai.recommendedAction;
-                document.getElementById('ai-source').textContent = ai.source;
-                showToast('AI Diagnostic: ' + ai.reason, Number(analysis.todayNet) >= 0 ? 'success' : 'warning');
+                if (ai) {
+                  document.getElementById('ai-headline').textContent = ai.headline || 'Branch liquidity diagnosis';
+                  document.getElementById('ai-reason').textContent = ai.reason || 'AI explanation unavailable.';
+                  document.getElementById('ai-action').textContent = ai.recommendedAction || 'Continue monitoring daily cash movement.';
+                  document.getElementById('ai-source').textContent = ai.source || 'Cash analysis';
+                }
               }).catch(function (error) {
-                dashboardError.textContent = 'Live data could not be loaded. Check that the backend services are running.';
+                dashboardError.textContent = 'Live data could not be loaded: ' + (error && error.message ? error.message : 'one dashboard request failed') + '.';
                 dashboardError.hidden = false;
                 console.error(error);
               });

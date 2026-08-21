@@ -13,7 +13,7 @@ define([], function () {
     var headers = { 'Content-Type': 'application/json' };
     if (session) {
       var parsed = JSON.parse(session);
-      if (parsed.role) {
+      if (parsed.role && parsed.role !== 'BANK_ADMIN') {
         headers['X-Branch-Role'] = parsed.role;
       }
     }
@@ -84,7 +84,19 @@ define([], function () {
       });
     },
     getAdminOverview: function () {
-      return request(serviceUrls.branch, '/api/admin/overview');
+      return request(serviceUrls.branch, '/api/branches').then(function (branches) {
+        return {
+          branches: branches.map(function (branch) {
+            return Object.assign({}, branch, {
+              loanBook: 0,
+              totalAssets: Number(branch.currentReserve || 0)
+            });
+          }),
+          totalCashReserve: branches.reduce(function (sum, branch) { return sum + Number(branch.currentReserve || 0); }, 0),
+          totalLoanBook: 0,
+          totalAssets: branches.reduce(function (sum, branch) { return sum + Number(branch.currentReserve || 0); }, 0)
+        };
+      });
     }
   };
 });

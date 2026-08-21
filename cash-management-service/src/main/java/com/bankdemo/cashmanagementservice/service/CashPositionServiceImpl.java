@@ -70,6 +70,14 @@ public class CashPositionServiceImpl implements CashPositionService {
 	}
 
 	@Override
+	public List<CashTransactionDto> getTransactionsSince(String branchId,int days){
+		LocalDateTime since = LocalDateTime.now().minusDays(days);
+		return transactionRepository
+			.findByBranchIdAndEventTimestampGreaterThanEqualOrderByEventTimestampAsc(branchId, since)
+			.stream().map(this::toDto).toList();
+	}
+
+	@Override
 	public DailyCashAnalysisDto getDailyAnalysis(String branchId, int days) {
 		BigDecimal currentReserve = branchServiceClient.getBranch(branchId).getCurrentReserve();
 		List<CashTransaction> transactions = transactionRepository.findByBranchIdOrderByEventTimestampDesc(branchId);
