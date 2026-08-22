@@ -37,7 +37,10 @@ public class BranchController {
 		return branchService.updateThreshold(branchId, request.getMinThresholdPct());
 	}
 
-	@PatchMapping("/{branchId}/reserve")
+	// PUT, not PATCH: the JDK's default HttpURLConnection (which Feign's default client
+	// wraps) hard-rejects the PATCH verb (java.net.ProtocolException: Invalid HTTP method),
+	// so any Feign client calling this with @PatchMapping fails with a 500 on every call.
+	@PutMapping("/{branchId}/reserve")
 	public BranchDto adjustReserve(@PathVariable String branchId, @RequestBody BigDecimal delta) {
 		return branchService.adjustReserve(branchId, delta);
 	}

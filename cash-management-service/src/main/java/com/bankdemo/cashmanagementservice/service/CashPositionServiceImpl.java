@@ -31,8 +31,11 @@ public class CashPositionServiceImpl implements CashPositionService {
 	@Override
 	public CashPositionDto getPosition(String branchId) {
 		BranchDto branch = branchServiceClient.getBranch(branchId);
-		BigDecimal threshold = branch.getCurrentReserve().multiply(branch.getMinThresholdPct())
-				.divide(BigDecimal.valueOf(100));
+		// Threshold is a floor against the branch's OPENING_RESERVE baseline, not its
+		// current (fluctuating) reserve — otherwise the check compares a value against a
+		// fraction of itself and can never flag a deficit for minThresholdPct < 100.
+		BigDecimal threshold = branch.getOpeningReserve().multiply(branch.getMinThresholdPct())
+				.divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
 		CashPositionDto position = new CashPositionDto();
 		position.setBranchId(branchId);
 		position.setCurrentReserve(branch.getCurrentReserve());

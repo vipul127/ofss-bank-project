@@ -61,8 +61,11 @@ public class BranchServiceImpl implements BranchService {
 		dto.setBranchName(branch.getBranchName());
 		dto.setLatitude(branch.getLatitude());
 		dto.setLongitude(branch.getLongitude());
+		dto.setOpeningReserve(branch.getOpeningReserve());
 		dto.setCurrentReserve(branch.getCurrentReserve());
 		dto.setMinThresholdPct(branch.getMinThresholdPct());
+		dto.setLoanBook(branch.getLoanBook());
+		dto.setTotalAssets(branch.getTotalAssets());
 		return dto;
 	}
 }

@@ -27,5 +27,10 @@ management:
         include: health,info
 openrouter:
   api-key: "sk-"
-  model: "meta-llama/llama-3.1-8b-instruct:free"
+  model: "openrouter/free"
   url: "https://openrouter.ai/api/v1/chat/completions"
+ai:
+  # How long a cached branch/admin AI response is served before the next request triggers a
+  # real refresh (forecast lookup + OpenRouter call). Freshness is a plain timestamp comparison
+  # against AI_INSIGHT_CACHE.LAST_UPDATED, not something the AI is asked to judge itself.
+  cache-ttl-minutes: 10

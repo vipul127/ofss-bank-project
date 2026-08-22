@@ -35,7 +35,9 @@ public class ForecastServiceImpl implements ForecastService {
 	public ForecastDto getOrComputeForecast(String branchId) {
 		LocalDate targetDate = LocalDate.now().plusDays(1);
 		BranchDto branch = branchServiceClient.getBranch(branchId);
-		BigDecimal threshold = branch.getCurrentReserve().multiply(branch.getMinThresholdPct()).divide(BigDecimal.valueOf(100));
+		// Same fix as cash-management-service: floor against OPENING_RESERVE, not currentReserve.
+		BigDecimal threshold = branch.getOpeningReserve().multiply(branch.getMinThresholdPct())
+				.divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
 		List<ForecastCalculator.DailyPosition> positions = dailyPositions(cashManagementServiceClient.getTransactionsSince(branchId,ROLLING_WINDOW_DAYS));
 		ForecastCalculator.ForecastResult result = calculator.forecastNextDay(positions, targetDate.getDayOfWeek(), threshold);
 		// Legacy/demo data may contain duplicate snapshots for the same branch/date.

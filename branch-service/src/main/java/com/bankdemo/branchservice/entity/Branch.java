@@ -24,6 +24,10 @@ public class Branch {
 	private BigDecimal currentReserve;
 	@Column(name = "MIN_THRESHOLD_PCT", nullable = false, precision = 5, scale = 2)
 	private BigDecimal minThresholdPct;
+	@Column(name = "LOAN_BOOK", nullable = false, precision = 15, scale = 2)
+	private BigDecimal loanBook;
+	@Column(name = "TOTAL_ASSETS", nullable = false, precision = 15, scale = 2)
+	private BigDecimal totalAssets;
 
 	public String getBranchId() { return branchId; }
 	public void setBranchId(String branchId) { this.branchId = branchId; }
@@ -39,4 +43,8 @@ public class Branch {
 	public void setCurrentReserve(BigDecimal currentReserve) { this.currentReserve = currentReserve; }
 	public BigDecimal getMinThresholdPct() { return minThresholdPct; }
 	public void setMinThresholdPct(BigDecimal minThresholdPct) { this.minThresholdPct = minThresholdPct; }
+	public BigDecimal getLoanBook() { return loanBook; }
+	public void setLoanBook(BigDecimal loanBook) { this.loanBook = loanBook; }
+	public BigDecimal getTotalAssets() { return totalAssets; }
+	public void setTotalAssets(BigDecimal totalAssets) { this.totalAssets = totalAssets; }
 }
