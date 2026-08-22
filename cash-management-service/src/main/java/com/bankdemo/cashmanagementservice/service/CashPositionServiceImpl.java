@@ -52,15 +52,24 @@ public class CashPositionServiceImpl implements CashPositionService {
 		if (amount == null || amount.signum() <= 0 || !("DEPOSIT".equals(txnType) || "WITHDRAWAL".equals(txnType))) {
 			throw new IllegalArgumentException("txnType must be DEPOSIT or WITHDRAWAL and amount must be positive");
 		}
+		// Validate the branch before changing either system.
+		branchServiceClient.getBranch(branchId);
+		BigDecimal delta = "DEPOSIT".equals(txnType) ? amount : amount.negate();
+		branchServiceClient.adjustReserve(branchId, delta);
 		CashTransaction transaction = new CashTransaction();
 		transaction.setTransactionId(UUID.randomUUID().toString());
 		transaction.setBranchId(branchId);
 		transaction.setTxnType(txnType);
 		transaction.setAmount(amount);
 		transaction.setEventTimestamp(LocalDateTime.now());
-		CashTransaction saved = transactionRepository.save(transaction);
-		branchServiceClient.adjustReserve(branchId, "DEPOSIT".equals(txnType) ? amount : amount.negate());
-		return toDto(saved);
+		try {
+			CashTransaction saved = transactionRepository.save(transaction);
+			return toDto(saved);
+		} catch (RuntimeException persistenceFailure) {
+			// Compensate the reserve if transaction persistence fails after the remote update.
+			try { branchServiceClient.adjustReserve(branchId, delta.negate()); } catch (RuntimeException ignored) { }
+			throw persistenceFailure;
+		}
 	}
 
 	@Override

@@ -3,19 +3,22 @@ package com.bankdemo.cashmanagementservice.controller;
 import com.bankdemo.cashmanagementservice.dto.CashPositionDto;
 import com.bankdemo.cashmanagementservice.dto.CashTransactionDto;
 import com.bankdemo.cashmanagementservice.dto.DailyCashAnalysisDto;
+import com.bankdemo.cashmanagementservice.dto.AiExplanationDto;
 import com.bankdemo.cashmanagementservice.service.CashPositionService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
+import com.bankdemo.cashmanagementservice.service.OpenRouterAiService;
 
 
 @RestController
 @RequestMapping("/api")
 public class CashPositionController {
 	private final CashPositionService cashPositionService;
+	private final OpenRouterAiService openRouterAiService;
 
-	public CashPositionController(CashPositionService cashPositionService) { this.cashPositionService = cashPositionService; }
+	public CashPositionController(CashPositionService cashPositionService, OpenRouterAiService openRouterAiService) { this.cashPositionService = cashPositionService; this.openRouterAiService = openRouterAiService; }
 
 	@GetMapping("/cash-position")
 	public List<CashPositionDto> getAllPositions(@RequestHeader(value = "X-Branch-Role", required = false) String role) {
@@ -58,6 +61,14 @@ public class CashPositionController {
 			@RequestHeader(value = "X-Branch-Role", required = false) String role) {
 		checkRole(branchId, role);
 		return cashPositionService.getDailyAnalysis(branchId, Math.min(Math.max(days, 2), 31));
+	}
+
+	@GetMapping("/cash-analysis/{branchId}/explanation")
+	public AiExplanationDto getExplanation(@PathVariable String branchId,
+			@RequestParam(defaultValue = "14") int days,
+			@RequestHeader(value = "X-Branch-Role", required = false) String role) {
+		checkRole(branchId, role);
+		return openRouterAiService.explain(branchId, cashPositionService.getDailyAnalysis(branchId, Math.min(Math.max(days, 2), 31)));
 	}
 
 	private void checkRole(String branchId, String role) {
