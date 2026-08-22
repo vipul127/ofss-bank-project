@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OpenRouter AI Diagnostics</title>
+  <meta name="robots" content="noindex">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #12100e; color: #f4ede4; max-width: 760px; margin: 40px auto; padding: 0 20px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .sub { color: #a89a8a; font-size: 13px; margin-bottom: 24px; }
+    .card { background: #1c1815; border: 1px solid #332b24; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2420; font-size: 14px; }
+    .row:last-child { border-bottom: none; }
+    .row span:first-child { color: #a89a8a; }
+    .row span:last-child { text-align: right; max-width: 60%; word-break: break-word; }
+    .status-ok { color: #6fcf97; font-weight: 700; }
+    .status-fail { color: #eb5757; font-weight: 700; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+    .badge.ok { background: rgba(111,207,151,0.15); color: #6fcf97; }
+    .badge.fail { background: rgba(235,87,87,0.15); color: #eb5757; }
+    pre { background: #0d0b09; border: 1px solid #2a2420; border-radius: 6px; padding: 12px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+    button { background: #d9653b; color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; }
+    button:hover { background: #c2542c; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    .cause { background: rgba(217,101,59,0.1); border: 1px solid rgba(217,101,59,0.3); border-radius: 6px; padding: 12px; font-size: 13px; margin-top: 8px; }
+    .loading { color: #a89a8a; }
+    a.back { color: #d9653b; font-size: 13px; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../index.html">&larr; back to console</a>
+  <h1>OpenRouter AI Diagnostics</h1>
+  <p class="sub">Fires one real call to cash-management-service's debug endpoint, which fires one real call to OpenRouter, and shows exactly what came back — status code, body, and everything. Not linked from normal navigation.</p>
+
+  <div class="card">
+    <div id="result" class="loading">Checking...</div>
+  </div>
+
+  <button id="retest">Re-run check</button>
+
+  <script>
+    var API = 'http://localhost:8082/api/debug/openrouter';
+
+    function badge(success) {
+      return '<span class="badge ' + (success ? 'ok' : 'fail') + '">' + (success ? 'WORKING' : 'FAILING') + '</span>';
+    }
+
+    function render(d) {
+      var html = '<div class="row"><span>Status</span><span>' + badge(d.success) + '</span></div>'
+        + '<div class="row"><span>Key configured</span><span>' + (d.keyConfigured ? 'yes' : 'no') + '</span></div>'
+        + '<div class="row"><span>Key (masked)</span><span>' + esc(d.keyMasked) + '</span></div>'
+        + '<div class="row"><span>Model</span><span>' + esc(d.model) + '</span></div>'
+        + '<div class="row"><span>URL</span><span>' + esc(d.url) + '</span></div>'
+        + '<div class="row"><span>HTTP status</span><span class="' + (d.success ? 'status-ok' : 'status-fail') + '">' + (d.httpStatus != null ? d.httpStatus : '—') + '</span></div>';
+      html += '<div class="cause"><strong>Likely cause:</strong> ' + esc(d.likelyCause || '—') + '</div>';
+      if (d.errorBody) html += '<p style="margin-top:14px;color:#a89a8a;font-size:13px;">Raw error body:</p><pre>' + esc(d.errorBody) + '</pre>';
+      if (d.errorMessage && !d.errorBody) html += '<p style="margin-top:14px;color:#a89a8a;font-size:13px;">Error:</p><pre>' + esc(d.errorMessage) + '</pre>';
+      if (d.success) html += '<p style="margin-top:14px;color:#a89a8a;font-size:13px;">Response body:</p><pre>' + esc(d.errorBody || '') + '</pre>';
+      document.getElementById('result').innerHTML = html;
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function run() {
+      document.getElementById('result').innerHTML = '<span class="loading">Checking...</span>';
+      document.getElementById('retest').disabled = true;
+      fetch(API).then(function (r) { return r.json(); }).then(render).catch(function (e) {
+        document.getElementById('result').innerHTML = '<div class="cause"><strong>Could not reach cash-management-service.</strong><br>Is it running on :8082? (' + esc(e.message) + ')</div>';
+      }).finally(function () { document.getElementById('retest').disabled = false; });
+    }
+
+    document.getElementById('retest').addEventListener('click', run);
+    run();
+  </script>
+</body>
+</html>

@@ -88,7 +88,7 @@
             </div>
             <div class="overview-grid">
               <article class="data-card chart-card"><div class="card-heading"><div><p class="eyebrow">14-day cash health</p><h2 id="trajectory-title">Daily closing reserve</h2></div><span id="trajectory-signal" class="signal-badge">Loading</span></div><div class="chart-key"><i class="key-actual"></i>Actual closing reserve <i class="key-forecast"></i>Tomorrow estimate</div><div id="cash-chart" class="cash-chart" aria-label="Fourteen day cash health milestone graph"></div><div id="chart-milestones" class="chart-milestones"></div></article>
-              <article class="data-card forecast-card"><div><p class="eyebrow">Tomorrow</p><h2>Forecast position</h2><p id="forecast-read" class="muted-text">Reading cash behavior...</p></div><div class="forecast-number"><strong id="forecast-value">--</strong><p id="forecast-band" class="muted-text">Loading range...</p></div></article>
+              <article class="data-card forecast-card"><div><p class="eyebrow">Tomorrow</p><h2>Projected Reserve</h2><p id="forecast-read" class="muted-text">Reading cash behavior...</p></div><div class="forecast-number"><strong id="forecast-value">--</strong><p id="forecast-band" class="muted-text">Loading range...</p></div></article>
             </div>
             <article class="ai-insight-card">
               <div>
@@ -137,8 +137,33 @@
           </div>
           <button id="admin-logout" class="secondary-button" type="button">Sign out</button>
         </header>
+        <a href="openr/index.html" target="_blank" rel="noopener" title="AI diagnostics (dev only)" style="position:fixed;bottom:8px;right:8px;width:10px;height:10px;border-radius:50%;background:#332b24;opacity:0.4;z-index:50;" aria-label="AI diagnostics"></a>
 
         <p id="admin-error" class="form-error" role="alert" hidden>Admin data could not be loaded. Please ensure backend services are running.</p>
+
+        <!-- Network-Wide AI Briefing -->
+        <article class="admin-ai-card network-briefing">
+          <div class="ai-card-header">
+            <div>
+              <span class="ai-pill">Network Liquidity Briefing</span>
+              <h3 id="admin-ai-headline">Reviewing network cash position...</h3>
+            </div>
+            <span id="admin-ai-live-indicator" class="ai-source" hidden>Live AI</span>
+          </div>
+          <div class="ai-reason-box">
+            <p id="admin-ai-conclusion" class="ai-reason-text">Gathering tomorrow's forecast for every branch...</p>
+          </div>
+          <div class="ai-grid-footer">
+            <div class="ai-drivers-block">
+              <span class="eyebrow-sm">Branch-by-Branch Review</span>
+              <ul id="admin-ai-branch-list" class="ai-drivers-list"></ul>
+            </div>
+            <div class="ai-action-block">
+              <span class="eyebrow-sm">Recommended Action</span>
+              <p id="admin-ai-action" class="ai-action-text"></p>
+            </div>
+          </div>
+        </article>
 
         <!-- Top Global Summary Cards -->
         <div class="admin-metrics">

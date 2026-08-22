@@ -38,6 +38,22 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number.isFinite(numeric) ? numeric : 0);
           }
 
+          // Never surface the internal source label ("Rule-based fallback", "OpenRouter", etc.)
+          // verbatim — it reads as "the AI didn't actually respond". Show a live-AI badge only
+          // when the model genuinely answered; say nothing (not a fake source name) otherwise,
+          // since the analysis itself is still real either way.
+          function setAiSourceBadge(elementId, source) {
+            var el = document.getElementById(elementId);
+            if (!el) return;
+            if (source === 'OpenRouter') {
+              el.textContent = 'Live AI';
+              el.hidden = false;
+            } else {
+              el.textContent = '';
+              el.hidden = true;
+            }
+          }
+
           function normalizeAnalysis(analysis) {
             analysis = analysis || {};
             var points = analysis.dailyPoints || [];
@@ -234,13 +250,27 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             }).catch(function () { document.getElementById('health-simulator').className = 'offline'; });
           }
 
+          // Bumped on every loadDashboard() call so an in-flight request from a branch the user
+          // has since switched away from (e.g. quick login -> logout -> different branch login)
+          // can detect it's stale and discard its result instead of overwriting the new branch's
+          // screen with the old branch's data.
+          var dashboardLoadToken = 0;
+
           function loadDashboard(account) {
             var branchId = account.role;
+            var myToken = ++dashboardLoadToken;
             dashboardError.hidden = true;
+            // Clear the AI card immediately so a slow or stale response is never mistaken for
+            // this branch's answer while it's still loading.
+            document.getElementById('ai-headline').textContent = 'Analyzing branch cash behavior...';
+            document.getElementById('ai-reason').textContent = 'Loading AI diagnosis for ' + branchId + '...';
+            document.getElementById('ai-action').textContent = '';
+            setAiSourceBadge('ai-source', null);
             Promise.all([apiClient.getPosition(branchId), apiClient.getForecast(branchId), apiClient.getRecentTransactions(branchId), apiClient.getTransferRequests(), apiClient.getDailyAnalysis(branchId), apiClient.getNearbyBranches(branchId), apiClient.getAiExplanation(branchId).catch(function () { return null;
-              
+
             })])
               .then(function (results) {
+                if (myToken !== dashboardLoadToken) return; // a newer branch login superseded this load
                 var position = results[0];
                 var forecast = results[1];
                 var transactions = results[2];
@@ -266,7 +296,9 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
                 document.getElementById('deficit-value').textContent = money(analysis.averageDeficit);
                 document.getElementById('impact-value').textContent = Number(analysis.withdrawalImpactPercent).toFixed(1) + '%';
                 document.getElementById('forecast-value').textContent = money(forecast.predictedPosition);
-                document.getElementById('forecast-band').textContent = 'Assumes recent operational flow';
+                document.getElementById('forecast-band').textContent = (forecast.confidenceBandLow != null && forecast.confidenceBandHigh != null)
+                  ? 'Expected range ' + money(forecast.confidenceBandLow) + ' – ' + money(forecast.confidenceBandHigh) + ' · 14-day trend'
+                  : '14-day trend projection';
                 document.getElementById('transactions-list').innerHTML = transactions.length ? transactions.map(function (transaction) {
                   return '<div class="list-row"><span>' + transaction.txnType + '<small>' + new Date(transaction.eventTimestamp).toLocaleString() + '</small></span><strong>' + money(transaction.amount) + '</strong></div>';
                 }).join('') : '<p class="muted-text">No transactions recorded yet.</p>';
@@ -276,9 +308,10 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
                   document.getElementById('ai-headline').textContent = ai.headline || 'Branch liquidity diagnosis';
                   document.getElementById('ai-reason').textContent = ai.reason || 'AI explanation unavailable.';
                   document.getElementById('ai-action').textContent = ai.recommendedAction || 'Continue monitoring daily cash movement.';
-                  document.getElementById('ai-source').textContent = ai.source || 'Cash analysis';
+                  setAiSourceBadge('ai-source', ai.source);
                 }
               }).catch(function (error) {
+                if (myToken !== dashboardLoadToken) return; // a newer branch login superseded this load
                 dashboardError.textContent = 'Live data could not be loaded: ' + (error && error.message ? error.message : 'one dashboard request failed') + '.';
                 dashboardError.hidden = false;
                 console.error(error);
@@ -325,6 +358,7 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
               apiClient.getDailyAnalysis(branchId, 10).catch(function () { return null; }),
               apiClient.getRecentTransactions(branchId).catch(function () { return []; })
             ]).then(function (results) {
+              if (branchId !== currentAdminBranchId) return; // a newer inspectBranch() call superseded this one
               var position = results[0];
               var ai = results[1] || {};
               var analysis = normalizeAnalysis(results[2]);
@@ -345,12 +379,10 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
               document.getElementById('inspector-ai-headline').textContent = ai.headline || 'Branch Liquidity Diagnosis';
               document.getElementById('inspector-ai-reason').textContent = ai.reason || 'Recent cash movements are being monitored.';
               document.getElementById('inspector-ai-action').textContent = ai.recommendedAction || 'Continue routine reserve monitoring.';
-              document.getElementById('inspector-ai-source').textContent = ai.source || 'AI_ANALYTICS_ENGINE';
-              if (ai.drivers && ai.drivers.length) {
-                document.getElementById('inspector-ai-drivers').innerHTML = ai.drivers.map(function (d) { return '<li>' + d + '</li>'; }).join('');
-              } else {
-                document.getElementById('inspector-ai-drivers').innerHTML = '<li>Today net movement: ' + money(analysis.todayNet) + '</li><li>Average daily net: ' + money(analysis.averageDailyNet) + '</li>';
-              }
+              setAiSourceBadge('inspector-ai-source', ai.source);
+              document.getElementById('inspector-ai-drivers').innerHTML = '<li>Today net movement: ' + money(analysis.todayNet) + '</li><li>Average daily net: ' + money(analysis.averageDailyNet) + '</li>' +
+                (ai.requiresCashLogistics ? '<li>Predicted tomorrow reserve: ' + money(ai.predictedTomorrowPosition) + '</li>' : '') +
+                (ai.suggestedSourceBranchName ? '<li>Suggested transfer source: ' + ai.suggestedSourceBranchName + '</li>' : '');
 
               // 10-Day Cash Flow Breakdown Table
               var points = analysis.dailyPoints || [];
@@ -390,8 +422,29 @@ require(['ojs/ojbootstrap', 'ojs/ojcontext', 'knockout', 'ojs/ojknockout', './se
             });
           }
 
+          function loadAdminInsights() {
+            apiClient.getAdminInsights().then(function (insight) {
+              document.getElementById('admin-ai-headline').textContent = insight.headline || 'Network liquidity reviewed';
+              document.getElementById('admin-ai-conclusion').textContent = insight.overallConclusion || 'Network cash position reviewed.';
+              document.getElementById('admin-ai-action').textContent = insight.recommendedAction || 'Continue routine monitoring.';
+              setAiSourceBadge('admin-ai-live-indicator', insight.source);
+              var rows = insight.branchInsights || [];
+              document.getElementById('admin-ai-branch-list').innerHTML = rows.length ? rows.map(function (b) {
+                var label = b.branchName + ' (' + b.branchId + ')';
+                return b.atRisk
+                  ? '<li><strong>' + label + '</strong> — projected short by ' + money(b.shortfallAmount) + ' tomorrow</li>'
+                  : '<li>' + label + ' — on track, ' + money(b.currentReserve) + ' reserve</li>';
+              }).join('') : '<li>No branch data available.</li>';
+            }).catch(function (err) {
+              console.error(err);
+              document.getElementById('admin-ai-headline').textContent = 'Network briefing unavailable';
+              document.getElementById('admin-ai-conclusion').textContent = 'Could not reach the insight service — check cash-management-service, forecast-service, and branch-service are running.';
+            });
+          }
+
           function loadAdminOverview() {
             document.getElementById('admin-error').hidden = true;
+            loadAdminInsights();
             apiClient.getAdminOverview().then(function (overview) {
               cachedAdminBranches = overview.branches || [];
               document.getElementById('admin-cash').textContent = money(overview.totalCashReserve);
